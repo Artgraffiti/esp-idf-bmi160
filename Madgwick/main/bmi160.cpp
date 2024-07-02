@@ -267,7 +267,7 @@ void bmi160(void *pvParameters)
 			POSE_t pose;
 			pose.roll = _roll;
 			pose.pitch = _pitch;
-			pose.yaw = 0.0;
+			pose.yaw = _yaw;
 			if (xQueueSend(xQueueTrans, &pose, 100) != pdPASS ) {
 				ESP_LOGE(pcTaskGetName(NULL), "xQueueSend fail");
 			}
@@ -278,7 +278,7 @@ void bmi160(void *pvParameters)
 			cJSON_AddStringToObject(request, "id", "data-request");
 			cJSON_AddNumberToObject(request, "roll", _roll);
 			cJSON_AddNumberToObject(request, "pitch", _pitch);
-			cJSON_AddNumberToObject(request, "yaw", 0.0);
+			cJSON_AddNumberToObject(request, "yaw", _yaw);
 			char *my_json_string = cJSON_Print(request);
 			ESP_LOGD(TAG, "my_json_string\n%s",my_json_string);
 			size_t xBytesSent = xMessageBufferSend(xMessageBufferToClient, my_json_string, strlen(my_json_string), 100);

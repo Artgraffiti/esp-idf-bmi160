@@ -1,0 +1,15 @@
+dependencies:
+  espressif/mdns:
+    component_hash: 31117d76cae83a6d83ffd7f035f6fdae5bd05b914fc30b641afeb208b84de19a
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 1.3.2
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 5.2.2
+manifest_hash: c0bbf6116be6c7cd16b5950dceec10c40cb28365c5f2aa032d5912cca80672b5
+target: esp32s3
+version: 1.0.0

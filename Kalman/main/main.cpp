@@ -1,5 +1,6 @@
 #include <cstring>
 #include "freertos/FreeRTOS.h"
+#include "freertos/portable.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/message_buffer.h"
@@ -69,6 +70,8 @@ void start_i2c(void) {
 
 void app_main(void)
 {
+	// esp_log_level_set("IMU", ESP_LOG_NONE);
+
 	// Initialize WiFi
 	start_wifi();
 
@@ -110,16 +113,16 @@ void app_main(void)
 	ws_server_start();
 
 	// Start web server
-	xTaskCreate(&server_task, "SERVER", 1024*2, (void *)cparam0, 5, NULL);
+	xTaskCreate(&server_task, "SERVER", 1024*4, (void *)cparam0, 5, NULL);
 
 	// Start web client
-	xTaskCreate(&client_task, "CLIENT", 1024*3, (void *)0x011, 5, NULL);
+	xTaskCreate(&client_task, "CLIENT", 1024*3, (void *)0x111, 5, NULL);
 
 	// Start imu task
 	xTaskCreate(&bmi160, "IMU", 1024*8, NULL, 5, NULL);
 
 	// Start udp task
-	xTaskCreate(&udp_trans, "TRANS", 1024*2, NULL, 5, NULL);
+	xTaskCreate(&udp_trans, "TRANS", 1024*4, NULL, 5, NULL);
 
-	vTaskDelay(100);
+	// vTaskDelay(100);
 }

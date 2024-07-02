@@ -13,7 +13,7 @@
 #include "freertos/message_buffer.h"
 #include "esp_timer.h"
 #include "esp_log.h"
-#include "driver/i2c.h"
+#include "driver/i2c.h"	
 #include "cJSON.h"
 
 #include "parameter.h"
@@ -42,7 +42,7 @@ static const char *TAG = "IMU";
 
 Kalman kalmanX; // Create the Kalman instances
 Kalman kalmanY;
-
+	
 /* IMU Data */
 struct bmi160_dev sensor;
 
@@ -196,14 +196,14 @@ void bmi160(void *pvParameters)
 	}
 
 	// Config Accel
-	sensor.accel_cfg.odr = BMI160_ACCEL_ODR_100HZ;
+	sensor.accel_cfg.odr = BMI160_ACCEL_ODR_800HZ;
 	sensor.accel_cfg.range = BMI160_ACCEL_RANGE_2G; // -2 --> +2[g]
 	sensor.accel_cfg.bw = BMI160_ACCEL_BW_NORMAL_AVG4;
 	sensor.accel_cfg.power = BMI160_ACCEL_NORMAL_MODE;
 	accel_sensitivity = 16384.0; // g
 
 	// Config Gyro
-	sensor.gyro_cfg.odr = BMI160_GYRO_ODR_100HZ;
+	sensor.gyro_cfg.odr = BMI160_GYRO_ODR_800HZ;
 	//sensor.gyro_cfg.range = BMI160_GYRO_RANGE_2000_DPS;
 	sensor.gyro_cfg.range = BMI160_GYRO_RANGE_250_DPS; // -250 --> +250[Deg/Sec]
 	sensor.gyro_cfg.bw = BMI160_GYRO_BW_NORMAL_MODE;
@@ -220,7 +220,7 @@ void bmi160(void *pvParameters)
 	// Set Kalman and gyro starting angle
 	double ax, ay, az;
 	double gx, gy, gz;
-	double roll, pitch; // Roll and pitch are calculated using the accelerometer
+	double roll, pitch, yaw; // Roll and pitch are calculated using the accelerometer
 	double kalAngleX, kalAngleY; // Calculated angle using a Kalman filter
 
 	_getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
@@ -229,6 +229,7 @@ void bmi160(void *pvParameters)
 	kalAngleY = pitch;
 	kalmanX.setAngle(roll); // Set starting angle
 	kalmanY.setAngle(pitch);
+	yaw = 0.0;
 	uint32_t timer = micros();
 
 	int elasped = 0;
@@ -247,6 +248,9 @@ void bmi160(void *pvParameters)
 		/* Roll and pitch estimation */
 		double gyroXrate = gx;
 		double gyroYrate = gy;
+
+		// yaw
+		yaw = yaw + gz * dt;
 
 #ifdef RESTRICT_PITCH
 		// This fixes the transition problem when the accelerometer angle jumps between -180 and 180 degrees
@@ -299,12 +303,13 @@ void bmi160(void *pvParameters)
 			// Send UDP packet
 			float _roll = kalAngleX-initial_kalAngleX;
 			float _pitch = kalAngleY-initial_kalAngleY;
-			ESP_LOGI(TAG, "roll:%f pitch=%f", _roll, _pitch);
+			float _yaw = yaw;
+			ESP_LOGI(TAG, "roll=%f pitch=%f yaw=%f", _roll, _pitch, _yaw);
 
 			POSE_t pose;
 			pose.roll = _roll;
 			pose.pitch = _pitch;
-			pose.yaw = 0.0;
+			pose.yaw = yaw;
 			if (xQueueSend(xQueueTrans, &pose, 100) != pdPASS ) {
 				ESP_LOGE(pcTaskGetName(NULL), "xQueueSend fail");
 			}
@@ -315,7 +320,7 @@ void bmi160(void *pvParameters)
 			cJSON_AddStringToObject(request, "id", "data-request");
 			cJSON_AddNumberToObject(request, "roll", _roll);
 			cJSON_AddNumberToObject(request, "pitch", _pitch);
-			cJSON_AddNumberToObject(request, "yaw", 0.0);
+			cJSON_AddNumberToObject(request, "yaw", _yaw);
 			char *my_json_string = cJSON_Print(request);
 			ESP_LOGD(TAG, "my_json_string\n%s",my_json_string);
 			size_t xBytesSent = xMessageBufferSend(xMessageBufferToClient, my_json_string, strlen(my_json_string), 100);
